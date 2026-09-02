@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>HBD TO ME</title>
+    <style>
+        /* RESET & VARIABLES */
+        *,
+        *::before,
+        *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --black: #050208;
+            --navy-900: #0d0614;
+            --navy-800: #150a1e;
+            --navy-700: #1e0f2a;
+            --white: #f8f0f8;
+            --gray-300: #d8c8dc;
+            --gray-500: #9a8a9e;
+            --gray-700: #5a4a5e;
+            --rose: #ff9ecb;
+            --rose-soft: #ffc8e0;
+            --purple: #b48cff;
+            --purple-soft: #d4b8ff;
+            --gold: #ffd9a0;
+            --glass-bg: rgba(20, 10, 25, 0.7);
+            --glass-border: rgba(255, 200, 220, 0.08);
+            --transition-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+            --font-body: 'Manrope', 'Inter', system-ui, sans-serif;
+            --font-mono: 'Orbitron', 'Space Grotesk', monospace;
+        }
+        html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+        body {
+            background: var(--black);
+            color: var(--white);
+            font-family: var(--font-body);
+            font-weight: 400;
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+            cursor: none;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background-image: radial-gradient(ellipse at 30% 20%, rgba(180,100,180,0.08), transparent 60%),
+                radial-gradient(ellipse at 70% 80%, rgba(255,150,180,0.06), transparent 60%),
+                radial-gradient(ellipse at 50% 50%, rgba(80,20,80,0.15), transparent 70%);
+        }
+        @media (pointer: coarse) { body { cursor: auto; } }
+        body.birthday-mode { --rose: #ffb0d8; --rose-soft: #ffd0e8; --purple: #d4a0ff; --purple-soft: #e8ccff; }
+        ::selection { background: var(--rose); color: var(--black); }
+        a { color: inherit; text-decoration: none; }
+        button { cursor: none; font-family: var(--font-body); border: none; background: none; color: inherit; }
+        @media (pointer: coarse) { button { cursor: pointer; } }
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: var(--black); }
+        ::-webkit-scrollbar-thumb { background: var(--gray-700); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--purple); }
+
+        /* SCROLL PROGRESS */
+        #scrollProgressBar { position: fixed; top: 0; left: 0; width: 0%; height: 2px; background: linear-gradient(90deg, var(--rose), var(--purple), var(--rose)); z-index: 10000; pointer-events: none; transition: width 0.1s linear; }
+        #scrollIndicator { position: fixed; bottom: 20px; right: 20px; font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--gray-500); z-index: 9999; pointer-events: none; opacity: 0; transition: opacity 0.4s ease; }
+        #scrollIndicator.visible { opacity: 1; }
+
+        /* CUSTOM CURSOR */
+        #customCursor { position: fixed; top: 0; left: 0; width: 8px; height: 8px; border-radius: 50%; background: var(--rose-soft); pointer-events: none; z-index: 99999; transform: translate(-50%, -50%); transition: width 0.2s, height 0.2s, background 0.2s; mix-blend-mode: screen; }
+        #customCursorRing { position: fixed; top: 0; left: 0; width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid rgba(255, 180, 210, 0.5); pointer-events: none; z-index: 99998; transform: translate(-50%, -50%); transition: width 0.3s, height 0.3s, border-color 0.3s, background 0.3s; }
+        #customCursorRing.hovering { width: 46px; height: 46px; border-color: rgba(255, 200, 220, 0.8); background: rgba(180, 100, 160, 0.1); }
+        @media (pointer: coarse) { #customCursor, #customCursorRing { display: none !important; } }
+
+        /* CANVASES */
+        #starfieldCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.6; }
+        #fireworksCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 50; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+        #fireworksCanvas.active { opacity: 1; }
+        #overlayCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 60; pointer-events: none; }
+        .noise-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; pointer-events: none; opacity: 0.02; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); background-size: 128px 128px; }
+
+        /* LOADING */
+        #loadingScreen { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: var(--black); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease, transform 0.8s var(--transition-smooth); overflow: hidden; }
+        #loadingScreen.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+        .ls-content { text-align: center; z-index: 2; padding: 20px; }
+        .ls-title { font-family: var(--font-display); font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--white); margin-bottom: 8px; animation: pulseText 2s infinite; }
+        .ls-sub { font-family: var(--font-mono); font-size: clamp(0.7rem, 2vw, 0.9rem); letter-spacing: 0.35em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 32px; }
+        .ls-progress-wrap { width: min(280px, 70vw); margin: 0 auto; }
+        .ls-progress-bar { width: 100%; height: 2px; background: var(--gray-700); border-radius: 2px; overflow: hidden; margin-bottom: 12px; }
+        .ls-progress-fill { height: 100%; background: linear-gradient(90deg, var(--rose), var(--purple)); border-radius: 2px; width: 0%; transition: width 0.3s; }
+        .ls-progress-text { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.2em; color: var(--gray-300); }
+        .ls-enter-btn { display: none; margin-top: 32px; padding: 14px 36px; font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--white); background: transparent; border: 1px solid rgba(255, 180, 210, 0.4); border-radius: 50px; transition: all 0.4s ease; animation: fadeInUp 0.6s forwards; }
+        .ls-enter-btn:hover { background: rgba(180,100,160,0.2); border-color: var(--rose); box-shadow: 0 0 40px rgba(255,150,200,0.3); transform: translateY(-2px); }
+        .ls-enter-btn.visible { display: inline-block; }
+        @keyframes pulseText { 0%,100%{opacity:1} 50%{opacity:0.7} }
+        @keyframes fadeInUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+        /* NAVIGATION */
+        #navbar { position: fixed; top: 0; left: 0; width: 100%; z-index: 5000; padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; background: rgba(10,5,15,0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border-bottom: 1px solid var(--glass-border); transition: all 0.4s; }
+        #navbar.scrolled { background: rgba(10,5,15,0.85); box-shadow: 0 4px 30px rgba(0,0,0,0.5); padding: 8px 24px; }
+        .nav-logo { font-family: var(--font-display); font-size: 0.8rem; font-weight: 700; letter-spacing: 0.3em; text-transform: uppercase; color: var(--white); z-index: 5001; }
+        .nav-logo span { color: var(--rose-soft); }
+        .nav-links { display: flex; gap: 22px; list-style: none; align-items: center; }
+        .nav-links a { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray-500); transition: color 0.3s; position: relative; }
+        .nav-links a:hover { color: var(--rose-soft); }
+        .nav-links a::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0%; height: 1px; background: var(--rose); transition: width 0.3s; }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-hamburger { display: none; flex-direction: column; gap: 5px; z-index: 5001; padding: 8px; }
+        .nav-hamburger span { width: 24px; height: 1.5px; background: var(--white); transition: all 0.3s; border-radius: 2px; }
+        .nav-hamburger.active span:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+        .nav-hamburger.active span:nth-child(2) { opacity: 0; }
+        .nav-hamburger.active span:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+        .nav-mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5,0,10,0.95); z-index: 4999; flex-direction: column; align-items: center; justify-content: center; gap: 22px; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+        .nav-mobile-overlay.active { display: flex; }
+        .nav-mobile-overlay a { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gray-300); }
+        .nav-mobile-overlay a:hover { color: var(--rose-soft); }
+        @media (max-width: 768px) { .nav-links { display: none; } .nav-hamburger { display: flex; } }
+
+        /* MUSIC */
+        #musicToggle { position: fixed; bottom: 20px; left: 20px; z-index: 5000; padding: 10px 16px; border-radius: 50px; background: rgba(15,8,20,0.7); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray-300); transition: all 0.4s; pointer-events: auto; }
+        #musicToggle:hover { border-color: var(--rose); color: var(--rose-soft); box-shadow: 0 0 25px rgba(255,150,200,0.2); }
+        #musicToggle.on { background: rgba(180,100,160,0.2); border-color: var(--rose); color: var(--rose-soft); }
+
+        /* SECTIONS */
+        .section { position: relative; z-index: 2; padding: 40px 20px; min-height: auto; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; max-width: 1000px; margin: 0 auto; opacity: 0; transform: translateY(20px); transition: opacity 0.7s ease, transform 0.7s var(--transition-smooth); }
+        .section.visible { opacity: 1; transform: translateY(0); }
+        .section-label { font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--rose-soft); margin-bottom: 8px; }
+        .section-title { font-family: var(--font-display); font-size: clamp(1.5rem, 4vw, 2.2rem); font-weight: 700; letter-spacing: 0.05em; color: var(--white); margin-bottom: 8px; line-height: 1.2; }
+
+        /* HERO */
+        #hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative; z-index: 2; padding: 40px 20px; opacity: 1; transform: none; }
+        .hero-birthdate { font-family: var(--font-mono); font-size: clamp(0.55rem,1.6vw,0.8rem); letter-spacing: 0.5em; text-transform: uppercase; color: var(--rose-soft); margin-bottom: 15px; animation: fadeInUp 1s forwards; opacity: 0; }
+        .hero-title { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.08em; line-height: 0.95; margin-bottom: 12px; color: var(--white); text-shadow: 0 0 60px rgba(255,150,200,0.5); }
+        .hero-title .ht-line { display: block; font-size: clamp(2.5rem,10vw,6rem); animation: heroReveal 1.2s forwards; opacity: 0; }
+        .hero-title .ht-line:nth-child(1) { animation-delay: 0.2s; }
+        .hero-title .ht-line:nth-child(2) { animation-delay: 0.45s; }
+        .hero-title .ht-line:nth-child(3) { animation-delay: 0.7s; }
+        @keyframes heroReveal { 0%{opacity:0;transform:translateY(40px);filter:blur(8px)} 100%{opacity:1;transform:translateY(0);filter:blur(0)} }
+        .hero-tagline { font-size: clamp(0.8rem,2.2vw,1.1rem); color: var(--gray-500); font-style: italic; margin-bottom: 12px; animation: fadeInUp 1s 1s forwards; opacity: 0; }
+        .hero-clock { font-family: var(--font-mono); font-size: clamp(1.3rem,3.5vw,2rem); letter-spacing: 0.15em; color: var(--white); margin-bottom: 4px; animation: fadeInUp 1s 1.2s forwards; opacity: 0; }
+        .hero-date-text { font-family: var(--font-mono); font-size: clamp(0.5rem,1.3vw,0.7rem); letter-spacing: 0.35em; text-transform: uppercase; color: var(--gray-500); margin-bottom: 20px; animation: fadeInUp 1s 1.35s forwards; opacity: 0; }
+        .hero-btn { padding: 12px 32px; border-radius: 50px; font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--white); background: transparent; border: 1px solid rgba(255,180,210,0.4); transition: all 0.4s; animation: fadeInUp 1s 1.5s forwards; opacity: 0; }
+        .hero-btn:hover { background: rgba(180,100,160,0.2); border-color: var(--rose); box-shadow: 0 0 40px rgba(255,150,200,0.35); transform: translateY(-3px); }
+
+        /* GRID GABUNGAN */
+        .combined-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; margin-top: 10px; }
+        .combined-grid > div { background: var(--glass-bg); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; }
+        @media (max-width: 768px) { .combined-grid { grid-template-columns: 1fr; } }
+
+        /* KOMPONEN */
+        .clock-display { font-family: var(--font-mono); font-size: clamp(1.8rem,5vw,3rem); font-weight: 300; letter-spacing: 0.1em; color: var(--white); margin-bottom: 4px; text-shadow: 0 0 30px rgba(255,150,200,0.3); }
+        .clock-day { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--rose-soft); }
+        .clock-date { font-family: var(--font-mono); font-size: 0.65rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gray-300); }
+        .clock-tz { font-family: var(--font-mono); font-size: 0.5rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--gray-500); }
+        .cd-grid { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+        .cd-item { background: var(--glass-bg); backdrop-filter: blur(15px); border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px 10px; min-width: 60px; text-align: center; }
+        .cd-number { font-family: var(--font-mono); font-size: clamp(1.2rem,3vw,2rem); font-weight: 300; color: var(--white); display: block; line-height: 1; }
+        .cd-label { font-family: var(--font-mono); font-size: 0.45rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gray-500); margin-top: 4px; display: block; }
+        .cd-next-text { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--rose-soft); margin-top: 8px; }
+        .age-number { font-family: var(--font-display); font-size: clamp(3rem,10vw,6rem); font-weight: 700; color: var(--white); line-height: 1; text-shadow: 0 0 50px rgba(255,150,200,0.4); }
+        .age-label { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.4em; text-transform: uppercase; color: var(--rose-soft); }
+        .lc-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; width: 100%; margin-top: 10px; }
+        .lc-item { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; padding: 10px; }
+        .lc-number { font-family: var(--font-mono); font-size: 1rem; font-weight: 300; color: var(--white); display: block; }
+        .lc-label { font-family: var(--font-mono); font-size: 0.4rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gray-500); }
+        .lc-quote { font-style: italic; color: var(--gray-500); margin-top: 8px; font-size: 0.75rem; }
+        .yp-year { font-family: var(--font-mono); font-size: 1.8rem; font-weight: 300; color: var(--white); }
+        .yp-percent { font-family: var(--font-display); font-size: 2.5rem; font-weight: 700; color: var(--rose-soft); text-shadow: 0 0 30px rgba(255,150,200,0.4); line-height: 1; }
+        .yp-of-text { font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--gray-500); }
+        .yp-bar { width: 100%; height: 3px; background: var(--gray-700); border-radius: 3px; overflow: hidden; margin: 12px auto; }
+        .yp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--rose), var(--purple)); border-radius: 3px; width: 0%; transition: width 0.5s; }
+        .yp-details { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; font-family: var(--font-mono); font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-500); }
+        .yp-details span { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 6px; padding: 4px 8px; }
+        .bp-ages { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; color: var(--white); }
+        .bp-ages span { color: var(--rose-soft); }
+        .bp-bar { width: 100%; height: 4px; background: var(--gray-700); border-radius: 4px; overflow: hidden; margin: 10px auto 4px; }
+        .bp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--rose), var(--purple)); width: 0%; transition: width 0.5s; }
+        .bp-bar-markers { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 0.5rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gray-500); }
+        .tl-container { position: relative; max-width: 100%; margin: 0 auto; padding-left: 20px; border-left: 1px solid var(--gray-700); text-align: left; }
+        .tl-item { margin-bottom: 16px; opacity: 0; transform: translateX(-15px); transition: opacity 0.4s ease, transform 0.4s; position: relative; padding-left: 10px; }
+        .tl-item.visible { opacity: 1; transform: translateX(0); }
+        .tl-item::before { content: ''; position: absolute; left: -24px; top: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 8px rgba(255,150,200,0.5); }
+        .tl-date { font-family: var(--font-mono); font-size: 0.5rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rose-soft); }
+        .tl-title { font-family: var(--font-display); font-size: 0.9rem; font-weight: 700; color: var(--white); }
+        .tl-desc { font-size: 0.7rem; color: var(--gray-500); font-style: italic; }
+        .quote-display { font-family: var(--font-display); font-size: clamp(0.9rem,2.5vw,1.3rem); font-weight: 700; color: var(--white); min-height: 30px; transition: opacity 0.5s; }
+        .quote-display.fading { opacity: 0; transform: translateY(5px); }
+        .quote-final { font-family: var(--font-display); font-size: clamp(1.5rem,4vw,2.5rem); font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--rose-soft); text-shadow: 0 0 40px rgba(255,150,200,0.5); animation: pulseGlow 2.5s infinite; margin-top: 6px; }
+        @keyframes pulseGlow { 0%,100%{text-shadow:0 0 30px rgba(255,150,200,0.3)} 50%{text-shadow:0 0 60px rgba(255,150,200,0.7)} }
+        .letter-text { max-width: 100%; text-align: left; font-size: 0.85rem; line-height: 1.6; color: var(--gray-300); }
+        .letter-text p { margin-bottom: 6px; opacity: 0; transform: translateY(10px); transition: opacity 0.4s, transform 0.4s; }
+        .letter-text p.visible { opacity: 1; transform: translateY(0); }
+        .letter-sign { font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--rose-soft); margin-top: 10px; text-align: right; }
+        .goals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 8px; margin-top: 10px; }
+        .goal-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px 10px; text-align: left; }
+        .goal-number { font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.2em; color: var(--rose-soft); }
+        .goal-title { font-family: var(--font-display); font-size: 0.75rem; font-weight: 700; color: var(--white); }
+        .dream-grid { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 10px; }
+        .dream-card { padding: 8px 14px; border-radius: 50px; background: var(--glass-bg); border: 1px solid var(--glass-border); font-family: var(--font-mono); font-size: 0.55rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray-300); transition: all 0.3s; animation: floatCard 6s infinite; }
+        .dream-card:hover { border-color: var(--rose); color: var(--rose-soft); box-shadow: 0 0 20px rgba(255,150,200,0.3); }
+        @keyframes floatCard { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
+        .mem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: 8px; margin-top: 10px; }
+        .mem-card { background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 10px; padding: 12px; text-align: center; }
+        .mem-icon { width: 28px; height: 28px; border-radius: 50%; background: rgba(255,150,200,0.15); display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; border: 1px solid rgba(255,180,210,0.25); }
+        .mem-icon svg { width: 14px; height: 14px; fill: var(--rose-soft); }
+        .mem-title { font-family: var(--font-display); font-size: 0.7rem; font-weight: 700; color: var(--white); text-transform: uppercase; }
+        .mem-desc { font-size: 0.6rem; color: var(--gray-500); font-style: italic; }
+        .rq-display { font-family: var(--font-display); font-size: 0.9rem; font-weight: 600; color: var(--gray-300); font-style: italic; min-height: 30px; }
+        .wish-btn, .surprise-btn { padding: 10px 24px; border-radius: 50px; font-family: var(--font-mono); font-size: 0.6rem; letter-spacing: 0.25em; text-transform: uppercase; color: var(--white); border: 1px solid rgba(255,180,210,0.4); background: transparent; transition: all 0.3s; }
+        .wish-btn:hover, .surprise-btn:hover { background: rgba(180,100,160,0.2); border-color: var(--rose); box-shadow: 0 0 25px rgba(255,150,200,0.3); }
+
+        /* OVERLAYS */
+        #wishOverlay, #surpriseOverlay { position: fixed; top:0; left:0; width:100vw; height:100vh; z-index:70; display:none; flex-direction:column; align-items:center; justify-content:center; text-align:center; pointer-events:auto; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+        #wishOverlay.active { display:flex; background:rgba(5,0,10,0.8); }
+        #surpriseOverlay.active { display:flex; background:rgba(5,0,10,0.95); animation:surpriseZoom 0.6s forwards; }
+        @keyframes surpriseZoom { 0%{transform:scale(0.8);opacity:0} 50%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
+        .wo-text, .so-title { font-family: var(--font-display); font-weight:700; text-shadow:0 0 40px rgba(255,150,200,0.6); }
+        .wo-sub, .so-date-range { font-family: var(--font-mono); text-transform:uppercase; color:var(--rose-soft); }
+        .so-age { font-family: var(--font-display); font-weight:700; color:var(--rose-soft); text-shadow:0 0 60px rgba(255,150,200,0.7); line-height:1; }
+        .so-close { margin-top:16px; padding:8px 20px; border-radius:50px; font-family:var(--font-mono); font-size:0.55rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gray-300); border:1px solid var(--gray-700); background:transparent; }
+
+        /* FINAL */
+        #finalSection { min-height:70vh; background:rgba(5,0,10,0.5); }
+        .final-text { font-family: var(--font-display); font-size: clamp(1rem,3vw,1.6rem); font-weight:700; color:var(--white); opacity:0; transform:translateY(10px); transition:opacity 0.6s, transform 0.6s; }
+        .final-text.visible { opacity:1; transform:translateY(0); }
+        .final-chapter { font-family: var(--font-mono); font-size: clamp(1.2rem,4vw,2rem); font-weight:300; letter-spacing:0.2em; color:var(--rose-soft); text-shadow:0 0 40px rgba(255,150,200,0.4); margin:10px 0; }
+        .final-progress-wrap { width:min(200px,60vw); margin:10px auto; }
+        .final-progress-bar { width:100%; height:2px; background:var(--gray-700); border-radius:2px; overflow:hidden; margin-bottom:4px; }
+        .final-progress-fill { height:100%; background:linear-gradient(90deg,var(--rose),var(--purple)); width:0%; transition:width 0.6s; }
+        .final-progress-text { font-family:var(--font-mono); font-size:0.55rem; letter-spacing:0.3em; color:var(--gray-500); }
+        .final-hbd { font-family:var(--font-display); font-size: clamp(2rem,6vw,3rem); font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--white); text-shadow:0 0 50px rgba(255,150,200,0.6); margin:10px 0; }
+        .final-story-continues { font-style:italic; color:var(--gray-500); font-size:0.8rem; }
+
+        /* FOOTER */
+        #footer { padding:20px; text-align:center; border-top:1px solid var(--glass-border); background:rgba(5,0,10,0.8); }
+        .footer-title { font-family:var(--font-display); font-size:0.9rem; font-weight:700; letter-spacing:0.2em; }
+        .footer-info { font-family:var(--font-mono); font-size:0.5rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gray-500); }
+        .footer-clock { font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.15em; margin:4px 0; }
+        .footer-made { font-family:var(--font-mono); font-size:0.45rem; color:var(--gray-700); margin-top:8px; font-style:italic; }
+
+        @media (max-width:768px) {
+            .section { padding:30px 16px; }
+            .combined-grid { gap:10px; }
+            .cd-item { min-width:50px; padding:8px 5px; }
+            .cd-number { font-size:1rem; }
+            .lc-grid { grid-template-columns:1fr 1fr; }
+        }
+        @media (max-width:400px) {
+            .cd-grid { gap:4px; }
+            .cd-item { min-width:45px; padding:6px 2px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="noise-overlay"></div>
+    <div id="scrollProgressBar"></div>
+    <div id="scrollIndicator">01 / 00</div>
+    <div id="customCursor"></div>
+    <div id="customCursorRing"></div>
+    <canvas id="starfieldCanvas"></canvas>
+    <canvas id="fireworksCanvas"></canvas>
+    <canvas id="overlayCanvas"></canvas>
+
+    <div id="loadingScreen">
+        <div class="ls-content">
+            <div class="ls-title">MY STORY</div>
+            <div class="ls-sub">IS LOADING...</div>
+            <div class="ls-progress-wrap">
+                <div class="ls-progress-bar"><div class="ls-progress-fill" id="lsProgressFill"></div></div>
+                <div class="ls-progress-text" id="lsProgressText">00%</div>
+            </div>
+            <button class="ls-enter-btn" id="lsEnterBtn">ENTER &rarr;</button>
+        </div>
+    </div>
+
+    <nav id="navbar">
+        <div class="nav-logo">HBD <span>TO ME</span></div>
+        <ul class="nav-links">
+            <li><a href="#hero">HOME</a></li>
+            <li><a href="#timeSection">TIME</a></li>
+            <li><a href="#lifeSection">LIFE</a></li>
+            <li><a href="#progressSection">PROGRESS</a></li>
+            <li><a href="#journeySection">JOURNEY</a></li>
+            <li><a href="#messageSection">MESSAGE</a></li>
+            <li><a href="#dreamsSection">DREAMS</a></li>
+            <li><a href="#interactiveSection">MAGIC</a></li>
+            <li><a href="#finalSection">FINAL</a></li>
+        </ul>
+        <button class="nav-hamburger" id="navHamburger"><span></span><span></span><span></span></button>
+        <div class="nav-mobile-overlay" id="navMobileOverlay">
+            <a href="#hero">HOME</a>
+            <a href="#timeSection">TIME</a>
+            <a href="#lifeSection">LIFE</a>
+            <a href="#progressSection">PROGRESS</a>
+            <a href="#journeySection">JOURNEY</a>
+            <a href="#messageSection">MESSAGE</a>
+            <a href="#dreamsSection">DREAMS</a>
+            <a href="#interactiveSection">MAGIC</a>
+            <a href="#finalSection">FINAL</a>
+        </div>
+    </nav>
+
+    <button id="musicToggle">&#9835; MUSIC OFF</button>
+
+    <section id="hero">
+        <div class="hero-birthdate">03 &bull; SEPTEMBER &bull; 2010</div>
+        <div class="hero-title"><span class="ht-line">HBD</span><span class="ht-line">TO</span><span class="ht-line">ME</span></div>
+        <p class="hero-tagline">"Another year. Another chapter."</p>
+        <div class="hero-clock" id="heroClock">-- : -- : --</div>
+        <div class="hero-date-text" id="heroDateText">---</div>
+        <button class="hero-btn" id="startStoryBtn">START THE STORY &darr;</button>
+    </section>
+
+    <section class="section" id="timeSection">
+        <div class="combined-grid">
+            <div>
+                <div class="section-label">CURRENT TIME</div>
+                <div class="clock-display" id="clockDisplay">-- : -- : --</div>
+                <div class="clock-day" id="clockDay">---</div>
+                <div class="clock-date" id="clockDate">---</div>
+                <div class="clock-tz" id="clockTz">ASIA/JAKARTA</div>
+            </div>
+            <div>
+                <div class="section-label">NEXT CHAPTER</div>
+                <div class="cd-grid" id="cdGrid">
+                    <div class="cd-item"><span class="cd-number" id="cdDays">00</span><span class="cd-label">DAYS</span></div>
+                    <div class="cd-item"><span class="cd-number" id="cdHours">00</span><span class="cd-label">HOURS</span></div>
+                    <div class="cd-item"><span class="cd-number" id="cdMinutes">00</span><span class="cd-label">MINUTES</span></div>
+                    <div class="cd-item"><span class="cd-number" id="cdSeconds">00</span><span class="cd-label">SECONDS</span></div>
+                </div>
+                <div class="cd-next-text" id="cdNextText">NEXT BIRTHDAY: 03 SEPTEMBER 2026</div>
+                <div id="birthdayModeBanner" style="display:none; margin-top:8px;">
+                    <div class="section-title" style="font-size:1.2rem;">HAPPY BIRTHDAY TO ME</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="lifeSection">
+        <div class="combined-grid">
+            <div style="text-align:center;">
+                <div class="section-label">I AM</div>
+                <div class="age-number" id="ageNumber">--</div>
+                <div class="age-label">YEARS OLD</div>
+                <div style="margin-top:8px; font-family:var(--font-mono); font-size:0.6rem; color:var(--gray-500);">
+                    <span id="exactAgeDisplay">--</span>
+                </div>
+            </div>
+            <div>
+                <div class="section-label">SINCE 03 SEPTEMBER 2010</div>
+                <div class="lc-grid">
+                    <div class="lc-item"><span class="lc-number" id="lcDays">0</span><span class="lc-label">DAYS</span></div>
+                    <div class="lc-item"><span class="lc-number" id="lcHours">0</span><span class="lc-label">HOURS</span></div>
+                    <div class="lc-item"><span class="lc-number" id="lcMinutes">0</span><span class="lc-label">MINUTES</span></div>
+                    <div class="lc-item"><span class="lc-number" id="lcSeconds">0</span><span class="lc-label">SECONDS</span></div>
+                </div>
+                <p class="lc-quote">"And every second becomes part of the story."</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="progressSection">
+        <div class="combined-grid">
+            <div>
+                <div class="yp-year" id="ypYear">----</div>
+                <div class="section-label">THIS YEAR IS MOVING</div>
+                <div class="yp-percent" id="ypPercent">--</div>
+                <div class="yp-of-text">OF <span id="ypYearLabel">----</span> COMPLETED</div>
+                <div class="yp-bar"><div class="yp-bar-fill" id="ypBarFill"></div></div>
+                <div class="yp-details">
+                    <span id="ypDaysPassed">-- DAYS PASSED</span>
+                    <span id="ypDaysRemaining">-- DAYS REMAINING</span>
+                    <span id="ypHoursRemaining">-- HOURS</span>
+                    <span id="ypMinutesRemaining">-- MIN</span>
+                    <span id="ypSecondsRemaining">-- SEC</span>
+                </div>
+            </div>
+            <div>
+                <div class="section-label">FROM ONE CHAPTER TO THE NEXT</div>
+                <div class="bp-ages">AGE <span id="bpCurrentAge">--</span> &rarr; <span id="bpNextAge">--</span></div>
+                <div class="bp-bar"><div class="bp-bar-fill" id="bpBarFill"></div></div>
+                <div class="bp-bar-markers"><span id="bpMarkerStart">AGE --</span><span id="bpMarkerEnd">AGE --</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="journeySection">
+        <div class="section-label">MY JOURNEY</div>
+        <div class="section-title">TIMELINE</div>
+        <div class="tl-container" id="tlContainer">
+            <div class="tl-item"><div class="tl-date">03 SEPTEMBER 2010</div><div class="tl-title">THE BEGINNING</div><div class="tl-desc">"Somewhere on this day, my story started."</div></div>
+            <div class="tl-item"><div class="tl-date">EARLY YEARS</div><div class="tl-title">LEARNING THE WORLD</div><div class="tl-desc">"Every moment was a discovery."</div></div>
+            <div class="tl-item"><div class="tl-date">CHILDHOOD</div><div class="tl-title">DISCOVERING EVERYTHING</div><div class="tl-desc">"Curiosity was my compass."</div></div>
+            <div class="tl-item"><div class="tl-date">GROWING UP</div><div class="tl-title">LEARNING FROM MISTAKES</div><div class="tl-desc">"Every fall shaped the rise."</div></div>
+            <div class="tl-item"><div class="tl-date">TODAY</div><div class="tl-title">STILL BECOMING</div><div class="tl-desc">"The journey never really ends."</div></div>
+            <div class="tl-item"><div class="tl-date" id="tlNextDate">NEXT CHAPTER</div><div class="tl-title" id="tlNextTitle">16 YEARS OLD</div><div class="tl-desc">"The next chapter begins."</div></div>
+        </div>
+        <div style="margin-top:20px;">
+            <div class="quote-display" id="quoteDisplay">"Time never stops."</div>
+            <div class="quote-final" id="quoteFinal" style="display:none;">I GROW.</div>
+        </div>
+    </section>
+
+    <section class="section" id="messageSection">
+        <div class="combined-grid">
+            <div>
+                <div class="section-label">DEAR FUTURE ME,</div>
+                <div class="letter-text" id="letterText">
+                    <p>Remember this moment.</p>
+                    <p>Remember who you were.</p>
+                    <p>Remember the things you dreamed about.</p>
+                    <p>Remember the people who stayed.</p>
+                    <p>Remember the mistakes that taught you something.</p>
+                    <p>You only needed to keep moving.</p>
+                    <p>I hope you became someone you're proud of.</p>
+                    <p>I hope you are happy that you kept going.</p>
+                </div>
+                <div class="letter-sign">&mdash; ME, <span id="letterYear">2026</span></div>
+            </div>
+            <div>
+                <div class="section-label">BEFORE THE NEXT BIRTHDAY</div>
+                <div class="goals-grid">
+                    <div class="goal-card"><div class="goal-number">01</div><div class="goal-title">BUILD SOMETHING GREAT</div></div>
+                    <div class="goal-card"><div class="goal-number">02</div><div class="goal-title">LEARN MORE</div></div>
+                    <div class="goal-card"><div class="goal-number">03</div><div class="goal-title">BECOME STRONGER</div></div>
+                    <div class="goal-card"><div class="goal-number">04</div><div class="goal-title">MAKE FAMILY PROUD</div></div>
+                    <div class="goal-card"><div class="goal-number">05</div><div class="goal-title">CREATE SOMETHING</div></div>
+                    <div class="goal-card"><div class="goal-number">06</div><div class="goal-title">EXPERIENCE MORE</div></div>
+                    <div class="goal-card"><div class="goal-number">07</div><div class="goal-title">KEEP GROWING</div></div>
+                    <div class="goal-card"><div class="goal-number">08</div><div class="goal-title">NEVER STOP DREAMING</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="dreamsSection">
+        <div class="combined-grid">
+            <div>
+                <div class="section-label">SOMEDAY...</div>
+                <div class="dream-grid">
+                    <div class="dream-card">TRAVEL</div>
+                    <div class="dream-card">CREATE</div>
+                    <div class="dream-card">LEARN</div>
+                    <div class="dream-card">BUILD</div>
+                    <div class="dream-card">EXPLORE</div>
+                    <div class="dream-card">WIN</div>
+                    <div class="dream-card">GROW</div>
+                    <div class="dream-card">LIVE</div>
+                </div>
+            </div>
+            <div>
+                <div class="section-label">MOMENTS</div>
+                <div class="mem-grid">
+                    <div class="mem-card"><div class="mem-icon"><svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4 6 4c2.2 0 3.6 1.3 4.5 2.5C11.4 5.3 12.8 4 15 4c4 0 5.5 4 4 7.5C19.5 16.1 12 21 12 21z"/></svg></div><div class="mem-title">A MOMENT</div><div class="mem-desc">"Worth remembering."</div></div>
+                    <div class="mem-card"><div class="mem-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div><div class="mem-title">A LESSON</div><div class="mem-desc">"Changed me."</div></div>
+                    <div class="mem-card"><div class="mem-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></svg></div><div class="mem-title">A PERSON</div><div class="mem-desc">"Who mattered."</div></div>
+                    <div class="mem-card"><div class="mem-icon"><svg viewBox="0 0 24 24"><path d="M12 2a4 4 0 00-4 4c0 2 1.5 3.5 2 4.5.5 1 .5 3 0 4.5C9.5 16 8 17 8 18c0 2 1.8 4 4 4s4-2 4-4c0-1-1.5-2-2-3-.5-1.5-.5-3.5 0-4.5.5-1 2-2.5 2-4.5a4 4 0 00-4-4z"/></svg></div><div class="mem-title">A DREAM</div><div class="mem-desc">"Still want."</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" id="interactiveSection">
+        <div style="margin-bottom:15px;">
+            <div class="rq-display" id="rqDisplay">"Another year. Another chance."</div>
+        </div>
+        <div style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center;">
+            <button class="wish-btn" id="wishBtn">MAKE A WISH &#10022;</button>
+            <button class="surprise-btn" id="surpriseBtn">OPEN SURPRISE</button>
+        </div>
+    </section>
+
+    <section class="section" id="finalSection">
+        <div class="final-text" id="finalText1">"Every chapter has an ending."</div>
+        <div class="final-text" id="finalText2">"But every ending..."</div>
+        <div class="final-text" id="finalText3">"creates another beginning."</div>
+        <div class="final-chapter" id="finalChapterLabel">CHAPTER <span id="finalChapterNum">16</span></div>
+        <div class="final-progress-wrap">
+            <div class="final-progress-bar"><div class="final-progress-fill" id="finalProgressFill"></div></div>
+            <div class="final-progress-text" id="finalProgressText">0%</div>
+        </div>
+        <div class="final-hbd" id="finalHbd" style="display:none;">WELCOME TO CHAPTER <span id="finalHbdChapter">16</span>.</div>
+        <div class="final-text" id="finalDateText" style="display:none;">03 SEPTEMBER 2026 &bull; <span id="finalAgeText">16</span> YEARS OLD</div>
+        <div class="final-hbd" id="finalHbdMe" style="display:none;">HBD TO ME.</div>
+        <div class="final-story-continues" id="finalStory" style="display:none;">"The story continues."</div>
+    </section>
+
+    <footer id="footer">
+        <div class="footer-title">HBD TO ME</div>
+        <div class="footer-info">Born &bull; 03 September 2010</div>
+        <div class="footer-info" id="footerChapter">Chapter &bull; 16</div>
+        <div class="footer-clock" id="footerClock">-- : -- : --</div>
+        <div class="footer-date" id="footerDate">---</div>
+        <div class="footer-tz">ASIA/JAKARTA</div>
+        <div class="footer-made">Made for myself, by myself. &copy; <span id="footerYear">2026</span></div>
+    </footer>
+
+    <div id="wishOverlay">
+        <div class="wo-text">WISH MADE.</div>
+        <div class="wo-sub">"Now make it happen."</div>
+        <div class="wo-motivation" style="font-family: var(--font-body); font-style: italic; color: var(--gray-300); margin-top: 10px; max-width: 80%;">
+            Bukan hanya usia yang bertambah, tapi tanggung jawab dan kebijaksanaan. Semoga tahun ini membawa kedewasaan, keberanian, dan cinta yang lebih besar.
+        </div>
+    </div>
+
+    <div id="surpriseOverlay">
+        <div class="so-title">HAPPY BIRTHDAY<br>TO ME</div>
+        <div class="so-date-range">03 &bull; 09 &bull; 2010 &rarr; 03 &bull; 09 &bull; <span id="soYear">2026</span></div>
+        <div class="so-age" id="soAge">16</div>
+        <button class="so-close" id="soClose">CLOSE</button>
+    </div>
+
+    <div id="midnightOverlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,0,10,0.95);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;">
+        <div id="midnightTime" style="font-family:var(--font-mono);font-size:clamp(2rem,8vw,5rem);font-weight:300;color:#fff;letter-spacing:0.2em;">00:00</div>
+        <div id="midnightMsg1" style="font-family:var(--font-display);font-size:clamp(1.4rem,5vw,2.8rem);font-weight:700;color:var(--rose-soft);margin-top:14px;letter-spacing:0.1em;display:none;">IT'S MY DAY.</div>
+        <div id="midnightMsg2" style="font-family:var(--font-display);font-size:clamp(1.8rem,6vw,3.5rem);font-weight:700;color:#fff;margin-top:10px;letter-spacing:0.08em;display:none;text-shadow:0 0 60px rgba(255,150,200,0.7);">HAPPY BIRTHDAY TO ME</div>
+        <div id="midnightMsg3" style="font-family:var(--font-mono);font-size:clamp(1.1rem,4vw,1.8rem);color:var(--rose-soft);margin-top:10px;letter-spacing:0.2em;display:none;">16 YEARS OLD</div>
+    </div>
+
+    <div id="countdownOverlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,0,10,0.95);z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;backdrop-filter:blur(20px);">
+        <div id="cdOverlayNumber" style="font-family:var(--font-display);font-size:clamp(4rem,18vw,10rem);font-weight:700;color:#fff;text-shadow:0 0 80px rgba(255,150,200,0.8);letter-spacing:0.05em;">10</div>
+        <div id="cdOverlayMsg" style="font-family:var(--font-display);font-size:clamp(1.4rem,5vw,2.2rem);font-weight:700;color:var(--rose-soft);letter-spacing:0.1em;display:none;">HAPPY BIRTHDAY</div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            name: "ME",
+            birthYear: 2010,
+            birthMonth: 9,
+            birthDay: 3,
+            birthdayMonth: 9,
+            birthdayDay: 3,
+            timezone: "Asia/Jakarta"
+        };
+
+        const $ = (id) => document.getElementById(id);
+        const loadingScreen = $('loadingScreen');
+        const lsProgressFill = $('lsProgressFill');
+        const lsProgressText = $('lsProgressText');
+        const lsEnterBtn = $('lsEnterBtn');
+        const navbar = $('navbar');
+        const navHamburger = $('navHamburger');
+        const navMobileOverlay = $('navMobileOverlay');
+        const heroClock = $('heroClock');
+        const heroDateText = $('heroDateText');
+        const startStoryBtn = $('startStoryBtn');
+        const clockDisplay = $('clockDisplay');
+        const clockDay = $('clockDay');
+        const clockDate = $('clockDate');
+        const clockTz = $('clockTz');
+        const cdDays = $('cdDays');
+        const cdHours = $('cdHours');
+        const cdMinutes = $('cdMinutes');
+        const cdSeconds = $('cdSeconds');
+        const cdNextText = $('cdNextText');
+        const birthdayModeBanner = $('birthdayModeBanner');
+        const cdGrid = $('cdGrid');
+        const ageNumber = $('ageNumber');
+        const lcDays = $('lcDays');
+        const lcHours = $('lcHours');
+        const lcMinutes = $('lcMinutes');
+        const lcSeconds = $('lcSeconds');
+        const exactAgeDisplay = $('exactAgeDisplay');
+        const ypYear = $('ypYear');
+        const ypPercent = $('ypPercent');
+        const ypYearLabel = $('ypYearLabel');
+        const ypBarFill = $('ypBarFill');
+        const ypDaysPassed = $('ypDaysPassed');
+        const ypDaysRemaining = $('ypDaysRemaining');
+        const ypHoursRemaining = $('ypHoursRemaining');
+        const ypMinutesRemaining = $('ypMinutesRemaining');
+        const ypSecondsRemaining = $('ypSecondsRemaining');
+        const bpAges = $('bpAges');
+        const bpCurrentAge = $('bpCurrentAge');
+        const bpNextAge = $('bpNextAge');
+        const bpBarFill = $('bpBarFill');
+        const bpMarkerStart = $('bpMarkerStart');
+        const bpMarkerEnd = $('bpMarkerEnd');
+        const tlNextDate = $('tlNextDate');
+        const tlNextTitle = $('tlNextTitle');
+        const quoteDisplay = $('quoteDisplay');
+        const quoteFinal = $('quoteFinal');
+        const letterYear = $('letterYear');
+        const rqDisplay = $('rqDisplay');
+        const wishBtn = $('wishBtn');
+        const wishOverlay = $('wishOverlay');
+        const surpriseBtn = $('surpriseBtn');
+        const surpriseOverlay = $('surpriseOverlay');
+        const soYear = $('soYear');
+        const soAge = $('soAge');
+        const soClose = $('soClose');
+        const finalText1 = $('finalText1');
+        const finalText2 = $('finalText2');
+        const finalText3 = $('finalText3');
+        const finalChapterLabel = $('finalChapterLabel');
+        const finalChapterNum = $('finalChapterNum');
+        const finalProgressFill = $('finalProgressFill');
+        const finalProgressText = $('finalProgressText');
+        const finalHbd = $('finalHbd');
+        const finalHbdChapter = $('finalHbdChapter');
+        const finalDateText = $('finalDateText');
+        const finalAgeText = $('finalAgeText');
+        const finalHbdMe = $('finalHbdMe');
+        const finalStory = $('finalStory');
+        const footerClock = $('footerClock');
+        const footerDate = $('footerDate');
+        const footerChapter = $('footerChapter');
+        const footerYear = $('footerYear');
+        const midnightOverlay = $('midnightOverlay');
+        const midnightTime = $('midnightTime');
+        const midnightMsg1 = $('midnightMsg1');
+        const midnightMsg2 = $('midnightMsg2');
+        const midnightMsg3 = $('midnightMsg3');
+        const countdownOverlay = $('countdownOverlay');
+        const cdOverlayNumber = $('cdOverlayNumber');
+        const cdOverlayMsg = $('cdOverlayMsg');
+        const musicToggle = $('musicToggle');
+        const scrollProgressBar = $('scrollProgressBar');
+        const scrollIndicator = $('scrollIndicator');
+        const starfieldCanvas = $('starfieldCanvas');
+        const fireworksCanvas = $('fireworksCanvas');
+        const overlayCanvas = $('overlayCanvas');
+        const customCursor = $('customCursor');
+        const customCursorRing = $('customCursorRing');
+
+        let isBirthdayMode = false;
+        let isMidnightEventTriggered = false;
+        let musicOn = false;
+        let audioCtx = null;
+        let musicOsc = null;
+        let finalSectionRevealed = false;
+        let wishActive = false;
+        let cdOverlayShown = false;
+
+        function getNow() { return new Date(); }
+        function getNextBirthday(now) {
+            const y = now.getFullYear();
+            const m = now.getMonth() + 1;
+            const d = now.getDate();
+            let targetYear = y;
+            if (m > CONFIG.birthdayMonth || (m === CONFIG.birthdayMonth && d >= CONFIG.birthdayDay)) {
+                if (!(m === CONFIG.birthdayMonth && d === CONFIG.birthdayDay)) targetYear = y + 1;
+            }
+            return new Date(targetYear, CONFIG.birthdayMonth - 1, CONFIG.birthdayDay, 0, 0, 0);
+        }
+        function getAge(now) {
+            const b = new Date(CONFIG.birthYear, CONFIG.birthMonth - 1, CONFIG.birthDay);
+            let years = now.getFullYear() - b.getFullYear();
+            const md = now.getMonth() - b.getMonth();
+            if (md < 0 || (md === 0 && now.getDate() < b.getDate())) years--;
+            return years;
+        }
+        function getExactAge(now) {
+            const b = new Date(CONFIG.birthYear, CONFIG.birthMonth - 1, CONFIG.birthDay);
+            let y = now.getFullYear() - b.getFullYear();
+            let m = now.getMonth() - b.getMonth();
+            let d = now.getDate() - b.getDate();
+            if (d < 0) { m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+            if (m < 0) { y--; m += 12; }
+            return { years: y, months: m, days: d };
+        }
+        function isBirthday(now) { return now.getMonth() + 1 === CONFIG.birthdayMonth && now.getDate() === CONFIG.birthdayDay; }
+        function getTimeInTimezone(now) { try { return new Intl.DateTimeFormat('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: CONFIG.timezone }).format(now); } catch(e) { return now.toLocaleTimeString('en-US', {hour12: false}); } }
+        function getDateInTimezone(now) { try { return new Intl.DateTimeFormat('en-US', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric', timeZone: CONFIG.timezone }).format(now); } catch(e) { return now.toLocaleDateString('en-US', {weekday:'long', day:'2-digit', month:'long', year:'numeric'}); } }
+        function getDayInTimezone(now) { try { return new Intl.DateTimeFormat('en-US', { weekday: 'long', timeZone: CONFIG.timezone }).format(now); } catch(e) { return now.toLocaleDateString('en-US', {weekday:'long'}); } }
+        function formatNumber(n) { return n.toString().padStart(2, '0'); }
+        function formatLargeNumber(n) { return n.toLocaleString('en-US'); }
+
+        // Loading
+        let loadingProgress = 0;
+        const loadingSteps = [{value:1, delay:200},{value:14, delay:500},{value:38, delay:700},{value:67, delay:600},{value:89, delay:500},{value:100, delay:400}];
+        function runLoadingSequence() { let i = 0; function doStep() { if(i >= loadingSteps.length){ showEnterBtn(); return; } const s = loadingSteps[i]; loadingProgress = s.value; lsProgressFill.style.width = loadingProgress+'%'; lsProgressText.textContent = String(loadingProgress).padStart(2,'0')+'%'; i++; setTimeout(doStep, s.delay); } doStep(); }
+        function showEnterBtn() { lsEnterBtn.classList.add('visible'); }
+        setTimeout(() => { if(!lsEnterBtn.classList.contains('visible')){ loadingProgress=100; lsProgressFill.style.width='100%'; lsProgressText.textContent='100%'; showEnterBtn(); } }, 4000);
+        lsEnterBtn.addEventListener('click', () => { loadingScreen.classList.add('hidden'); setTimeout(()=>loadingScreen.style.display='none',800); playClickSound(); });
+
+        // Music
+        function initAudioContext(){ if(!audioCtx){ try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return false; } } return true; }
+        function startMusic(){ if(!initAudioContext()) return; if(musicOsc) return; musicOsc = audioCtx.createOscillator(); const g = audioCtx.createGain(); musicOsc.type='sine'; musicOsc.frequency.value=220; g.gain.value=0.04; musicOsc.connect(g); g.connect(audioCtx.destination); musicOsc.start(); const o2=audioCtx.createOscillator(); const g2=audioCtx.createGain(); o2.type='sine'; o2.frequency.value=277; g2.gain.value=0.02; o2.connect(g2); g2.connect(audioCtx.destination); o2.start(); musicOsc._o2=o2; const lfo=audioCtx.createOscillator(); const lg=audioCtx.createGain(); lfo.frequency.value=0.1; lg.gain.value=0.015; lfo.connect(lg); lg.connect(g.gain); lfo.start(); musicOsc._lfo=lfo; }
+        function stopMusic(){ if(musicOsc){ try{ musicOsc.stop(); if(musicOsc._o2)musicOsc._o2.stop(); if(musicOsc._lfo)musicOsc._lfo.stop(); }catch(e){} musicOsc=null; } }
+        musicToggle.addEventListener('click', ()=>{ if(musicOn){ stopMusic(); musicOn=false; musicToggle.textContent='♫ MUSIC OFF'; musicToggle.classList.remove('on'); } else { startMusic(); musicOn=true; musicToggle.textContent='♫ MUSIC ON'; musicToggle.classList.add('on'); } playClickSound(); });
+        function playClickSound(){ if(!initAudioContext())return; try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=800; g.gain.value=0.08; o.connect(g); g.connect(audioCtx.destination); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.15); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime+0.15); }catch(e){} }
+        function playWishSound(){ if(!initAudioContext())return; try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='sine'; o.frequency.value=400; g.gain.value=0.06; o.connect(g); g.connect(audioCtx.destination); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.8); o.frequency.exponentialRampToValueAtTime(1200,audioCtx.currentTime+0.5); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime+0.8); }catch(e){} }
+        function playSurpriseSound(){ if(!initAudioContext())return; try{ const o=audioCtx.createOscillator(); const g=audioCtx.createGain(); o.type='triangle'; o.frequency.value=300; g.gain.value=0.1; o.connect(g); g.connect(audioCtx.destination); g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+1.2); o.frequency.exponentialRampToValueAtTime(900,audioCtx.currentTime+0.6); o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime+1.2); const o2=audioCtx.createOscillator(); const g2=audioCtx.createGain(); o2.type='sine'; o2.frequency.value=600; g2.gain.value=0.06; o2.connect(g2); g2.connect(audioCtx.destination); g2.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+1.5); o2.start(audioCtx.currentTime+0.15); o2.stop(audioCtx.currentTime+1.5); }catch(e){} }
+
+        // Starfield
+        let starCtx = starfieldCanvas.getContext('2d');
+        let stars = [], shootingStars = [], starAnimationId = null;
+        function initStars(){ const isMobile = window.innerWidth < 768; const count = isMobile ? 70 : 150; stars = []; for(let i=0;i<count;i++){ stars.push({ x:Math.random()*starfieldCanvas.width, y:Math.random()*starfieldCanvas.height, r:Math.random()*1.5+0.5, baseAlpha:Math.random()*0.5+0.2, alpha:Math.random()*0.5+0.2, twinkleSpeed:Math.random()*0.02+0.005, twinkleOffset:Math.random()*Math.PI*2, vx:(Math.random()-0.5)*0.05, vy:(Math.random()-0.5)*0.03 }); } }
+        function resizeStarfield(){ starfieldCanvas.width=window.innerWidth; starfieldCanvas.height=window.innerHeight; initStars(); }
+        function spawnShootingStar(){ if(shootingStars.length>2)return; shootingStars.push({ x:Math.random()*starfieldCanvas.width, y:Math.random()*starfieldCanvas.height*0.4, vx:-(Math.random()*4+3), vy:Math.random()*2+1.5, life:0, maxLife:Math.random()*40+30, alpha:1 }); }
+        function drawStarfield(){ if(!starCtx)return; starCtx.clearRect(0,0,starfieldCanvas.width,starfieldCanvas.height); for(const s of stars){ s.alpha=s.baseAlpha+Math.sin(Date.now()*s.twinkleSpeed+s.twinkleOffset)*0.15; s.x+=s.vx; s.y+=s.vy; if(s.x<-5)s.x=starfieldCanvas.width+5; if(s.x>starfieldCanvas.width+5)s.x=-5; if(s.y<-5)s.y=starfieldCanvas.height+5; if(s.y>starfieldCanvas.height+5)s.y=-5; starCtx.beginPath(); starCtx.arc(s.x,s.y,s.r,0,Math.PI*2); starCtx.fillStyle=`rgba(230,200,240,${s.alpha})`; starCtx.fill(); if(s.r>1.2){ starCtx.beginPath(); starCtx.arc(s.x,s.y,s.r*2.5,0,Math.PI*2); starCtx.fillStyle=`rgba(200,150,220,${s.alpha*0.25})`; starCtx.fill(); } } for(let i=shootingStars.length-1;i>=0;i--){ const ss=shootingStars[i]; ss.x+=ss.vx; ss.y+=ss.vy; ss.life++; ss.alpha=1-(ss.life/ss.maxLife); if(ss.life>=ss.maxLife||ss.alpha<=0||ss.x<-50||ss.y>starfieldCanvas.height+50){ shootingStars.splice(i,1); continue; } starCtx.beginPath(); starCtx.moveTo(ss.x,ss.y); starCtx.lineTo(ss.x-ss.vx*15,ss.y-ss.vy*15); starCtx.strokeStyle=`rgba(255,200,230,${ss.alpha*0.7})`; starCtx.lineWidth=1.5; starCtx.stroke(); starCtx.beginPath(); starCtx.arc(ss.x,ss.y,2,0,Math.PI*2); starCtx.fillStyle=`rgba(255,255,255,${ss.alpha})`; starCtx.fill(); } if(Math.random()<0.003)spawnShootingStar(); starAnimationId=requestAnimationFrame(drawStarfield); }
+
+        // Fireworks
+        let fwCtx = fireworksCanvas.getContext('2d');
+        let fireworks = [], fwAnimationId = null, fwActive = false;
+        function resizeFireworks(){ fireworksCanvas.width=window.innerWidth; fireworksCanvas.height=window.innerHeight; }
+        function spawnFirework(){ if(fireworks.length>12)return; const x=Math.random()*fireworksCanvas.width, y=Math.random()*fireworksCanvas.height*0.4+fireworksCanvas.height*0.15; const colors=['#ffb0d8','#d4b8ff','#ff9ecb','#ffe0b0','#e8ccff','#ffffff']; const color=colors[Math.floor(Math.random()*colors.length)]; for(let i=0;i<30;i++){ const angle=(Math.PI*2/30)*i+Math.random()*0.3; const speed=Math.random()*3+1; fireworks.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:0,maxLife:Math.random()*50+40,alpha:1,color,radius:Math.random()*2+1}); } }
+        function drawFireworks(){ if(!fwCtx)return; fwCtx.clearRect(0,0,fireworksCanvas.width,fireworksCanvas.height); for(let i=fireworks.length-1;i>=0;i--){ const p=fireworks[i]; p.x+=p.vx; p.y+=p.vy; p.vy+=0.03; p.vx*=0.99; p.life++; p.alpha=1-(p.life/p.maxLife); if(p.life>=p.maxLife||p.alpha<=0){fireworks.splice(i,1);continue;} fwCtx.beginPath(); fwCtx.arc(p.x,p.y,p.radius,0,Math.PI*2); fwCtx.fillStyle=p.color+Math.floor(p.alpha*180).toString(16).padStart(2,'0'); fwCtx.fill(); } if(fwActive&&Math.random()<0.15)spawnFirework(); if(fireworks.length>0||fwActive)fwAnimationId=requestAnimationFrame(drawFireworks); else fwAnimationId=null; }
+        function startFireworks(){ fwActive=true; fireworksCanvas.classList.add('active'); if(!fwAnimationId)drawFireworks(); }
+        function stopFireworks(){ fwActive=false; fireworksCanvas.classList.remove('active'); }
+
+        // Confetti
+        let ovCtx = overlayCanvas.getContext('2d');
+        let confettiParticles = [], ovAnimationId = null;
+        function resizeOverlayCanvas(){ overlayCanvas.width=window.innerWidth; overlayCanvas.height=window.innerHeight; }
+        function spawnConfetti(count=60){ const colors=['#ffb0d8','#d4b8ff','#ff9ecb','#ffe0b0','#e8ccff','#ffffff','#ffc8e0']; for(let i=0;i<count;i++){ confettiParticles.push({ x:Math.random()*overlayCanvas.width, y:-10-Math.random()*50, w:Math.random()*6+3, h:Math.random()*3+1, vx:(Math.random()-0.5)*3, vy:Math.random()*2+1.5, color:colors[Math.floor(Math.random()*colors.length)], rotation:Math.random()*Math.PI*2, rotSpeed:(Math.random()-0.5)*0.2, life:0, maxLife:Math.random()*200+150, alpha:1 }); } if(!ovAnimationId)drawOverlay(); }
+        function drawOverlay(){ if(!ovCtx)return; ovCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); for(let i=confettiParticles.length-1;i>=0;i--){ const c=confettiParticles[i]; c.x+=c.vx; c.y+=c.vy; c.rotation+=c.rotSpeed; c.life++; c.alpha=1-(c.life/c.maxLife); if(c.life>=c.maxLife||c.alpha<=0||c.y>overlayCanvas.height+20){confettiParticles.splice(i,1);continue;} ovCtx.save(); ovCtx.translate(c.x,c.y); ovCtx.rotate(c.rotation); ovCtx.globalAlpha=c.alpha; ovCtx.fillStyle=c.color; ovCtx.fillRect(-c.w/2,-c.h/2,c.w,c.h); ovCtx.restore(); } if(confettiParticles.length>0)ovAnimationId=requestAnimationFrame(drawOverlay); else ovAnimationId=null; }
+
+        // Wish
+        function triggerWish(){ if(wishActive)return; wishActive=true; playWishSound(); wishOverlay.classList.add('active'); const star={x:overlayCanvas.width/2,y:overlayCanvas.height+20,vy:-2.5,alpha:1,size:3}; function animateWish(){ if(!ovCtx)return; ovCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); star.y+=star.vy; star.x+=(Math.random()-0.5)*0.8; ovCtx.beginPath(); ovCtx.arc(star.x,star.y,star.size,0,Math.PI*2); ovCtx.fillStyle=`rgba(255,255,255,${star.alpha})`; ovCtx.fill(); ovCtx.beginPath(); ovCtx.moveTo(star.x,star.y); ovCtx.lineTo(star.x,star.y+20); ovCtx.strokeStyle='rgba(255,200,230,0.3)'; ovCtx.lineWidth=1; ovCtx.stroke(); if(star.y<overlayCanvas.height*0.25){ wishActive=false; spawnConfetti(50); wishOverlay.classList.remove('active'); return; } requestAnimationFrame(animateWish); } animateWish(); setTimeout(()=>{ if(wishActive){ wishActive=false; wishOverlay.classList.remove('active'); } },4000); }
+
+        // Surprise
+        function triggerSurprise(){ playSurpriseSound(); surpriseOverlay.classList.add('active'); spawnConfetti(80); if(isBirthdayMode)startFireworks(); const now=getNow(); const nb=getNextBirthday(now); soYear.textContent=nb.getFullYear(); soAge.textContent=nb.getFullYear()-CONFIG.birthYear; }
+        soClose.addEventListener('click',()=>{ surpriseOverlay.classList.remove('active'); playClickSound(); setTimeout(()=>{ if(!isBirthdayMode)ovCtx.clearRect(0,0,overlayCanvas.width,overlayCanvas.height); },500); });
+
+        // Cursor
+        let cursorX=-100,cursorY=-100,ringX=-100,ringY=-100,cursorVisible=false;
+        const isTouchDevice=window.matchMedia('(pointer: coarse)').matches;
+        if(!isTouchDevice){ document.addEventListener('mousemove',(e)=>{ cursorX=e.clientX; cursorY=e.clientY; cursorVisible=true; customCursor.style.transform=`translate(${cursorX-4}px,${cursorY-4}px)`; customCursorRing.style.transform=`translate(${cursorX-14}px,${cursorY-14}px)`; }); document.addEventListener('mouseleave',()=>{ cursorVisible=false; customCursor.style.opacity='0'; customCursorRing.style.opacity='0'; }); document.addEventListener('mouseenter',()=>{ cursorVisible=true; customCursor.style.opacity='1'; customCursorRing.style.opacity='1'; }); document.addEventListener('mouseover',(e)=>{ if(e.target.closest('button')||e.target.closest('a')||e.target.closest('.goal-card')||e.target.closest('.dream-card')||e.target.closest('.mem-card')||e.target.closest('.cd-item'))customCursorRing.classList.add('hovering'); else customCursorRing.classList.remove('hovering'); }); function animateCursorRing(){ if(!cursorVisible)return; ringX+=(cursorX-ringX)*0.15; ringY+=(cursorY-ringY)*0.15; customCursorRing.style.transform=`translate(${ringX-14}px,${ringY-14}px)`; requestAnimationFrame(animateCursorRing); } animateCursorRing(); } else { customCursor.style.display='none'; customCursorRing.style.display='none'; }
+
+        // Nav
+        navHamburger.addEventListener('click',()=>{ navHamburger.classList.toggle('active'); navMobileOverlay.classList.toggle('active'); playClickSound(); });
+        navMobileOverlay.querySelectorAll('a').forEach(l=>l.addEventListener('click',()=>{ navHamburger.classList.remove('active'); navMobileOverlay.classList.remove('active'); }));
+
+        // Scroll & visibility
+        function updateScrollProgress(){ const st=window.scrollY; const sh=document.documentElement.scrollHeight-window.innerHeight; const p=sh>0?(st/sh)*100:0; scrollProgressBar.style.width=p+'%'; const secs=document.querySelectorAll('.section,#hero,#footer'); let idx=0; secs.forEach((s,i)=>{ const r=s.getBoundingClientRect(); if(r.top<=window.innerHeight/2&&r.bottom>=window.innerHeight/2)idx=i; }); scrollIndicator.textContent=String(idx+1).padStart(2,'0')+' / '+String(secs.length).padStart(2,'0'); if(st>100)scrollIndicator.classList.add('visible'); else scrollIndicator.classList.remove('visible'); ensureVisible(); }
+        function ensureVisible(){ document.querySelectorAll('.section:not(.visible)').forEach(s=>{ const r=s.getBoundingClientRect(); if(r.top<window.innerHeight&&r.bottom>0)s.classList.add('visible'); }); document.querySelectorAll('.tl-item:not(.visible)').forEach(i=>{ const r=i.getBoundingClientRect(); if(r.top<window.innerHeight&&r.bottom>0)i.classList.add('visible'); }); const ls=$('letterText'); if(ls){ const r=ls.getBoundingClientRect(); if(r.top<window.innerHeight&&r.bottom>0)ls.querySelectorAll('p:not(.visible)').forEach((p,i)=>setTimeout(()=>p.classList.add('visible'),i*80)); } const fs=$('finalSection'); if(fs){ const r=fs.getBoundingClientRect(); if(r.top<window.innerHeight&&r.bottom>0&&!finalSectionRevealed)revealFinalSection(); } }
+        window.addEventListener('scroll',()=>{ if(window.scrollY>50)navbar.classList.add('scrolled'); else navbar.classList.remove('scrolled'); updateScrollProgress(); });
+        window.addEventListener('load',ensureVisible);
+        setTimeout(()=>{ document.querySelectorAll('.section:not(.visible)').forEach(s=>s.classList.add('visible')); document.querySelectorAll('.tl-item:not(.visible)').forEach(i=>i.classList.add('visible')); const ls=$('letterText'); if(ls)ls.querySelectorAll('p:not(.visible)').forEach(p=>p.classList.add('visible')); if(!finalSectionRevealed)revealFinalSection(); },3000);
+
+        // IntersectionObservers
+        const observer=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); if(e.target.id==='finalSection')revealFinalSection(); } }),{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+        document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+        document.querySelectorAll('.tl-item').forEach(i=>{ const io=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); } }),{threshold:0.3}); io.observe(i); });
+        const letterObserver=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting){ e.target.querySelectorAll('p').forEach((p,i)=>setTimeout(()=>p.classList.add('visible'),i*100)); letterObserver.unobserve(e.target); } }),{threshold:0.2}); letterObserver.observe($('letterText'));
+
+        // Final reveal
+        function revealFinalSection(){ if(finalSectionRevealed)return; finalSectionRevealed=true; const now=getNow(); const ch=getAge(now)+1; const ny=getNextBirthday(now).getFullYear(); finalChapterNum.textContent=ch; finalHbdChapter.textContent=ch; finalAgeText.textContent=ch; finalChapterLabel.textContent='CHAPTER '+ch; finalDateText.textContent='03 SEPTEMBER '+ny+' • '+ch+' YEARS OLD'; setTimeout(()=>finalText1.classList.add('visible'),200); setTimeout(()=>finalText2.classList.add('visible'),1200); setTimeout(()=>finalText3.classList.add('visible'),2200); setTimeout(()=>{ finalChapterLabel.style.opacity='1'; finalChapterLabel.style.transform='translateY(0)'; },3200); const steps=[0,25,50,75,100]; let pi=0; const iv=setInterval(()=>{ if(pi>=steps.length){ clearInterval(iv); setTimeout(()=>{ finalHbd.style.display='block'; finalDateText.style.display='block'; setTimeout(()=>{ finalHbdMe.style.display='block'; setTimeout(()=>{ finalStory.style.display='block'; },800); },800); },400); return; } const p=steps[pi]; finalProgressFill.style.width=p+'%'; finalProgressText.textContent=p+'%'; pi++; },400); }
+
+        // Quotes
+        const quoteSequence=[{text:'"Time never stops."',delay:2000},{text:'"People change."',delay:2000},{text:'"Memories become stories."',delay:2000},{text:'"And every year…"',delay:1500,pause:true},{text:'I GROW.',delay:500,final:true}];
+        let quoteIndex=0,quoteTimeout=null;
+        function runQuoteSequence(){ if(quoteIndex>=quoteSequence.length)return; const q=quoteSequence[quoteIndex]; quoteDisplay.classList.add('fading'); setTimeout(()=>{ if(q.final){ quoteDisplay.style.display='none'; quoteFinal.style.display='block'; } else { quoteDisplay.textContent=q.text; quoteDisplay.classList.remove('fading'); } quoteIndex++; const d=q.pause?q.delay+1500:q.delay; quoteTimeout=setTimeout(runQuoteSequence,d); },400); }
+        const quotesObserver=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting&&quoteIndex===0){ runQuoteSequence(); quotesObserver.unobserve(e.target); } }),{threshold:0.4}); quotesObserver.observe($('journeySection'));
+
+        // Random quotes with motivation
+        const randomQuotes=[
+            '"Another year. Another chance."',
+            '"Your story isn\'t finished."',
+            '"Bukan hanya usia yang bertambah, tapi tanggung jawab dan kebijaksanaan."',
+            '"Setiap tahun adalah kesempatan untuk menjadi versi terbaik dirimu."',
+            '"Jangan hanya bertambah umur, tapi bertambah juga kebaikan dan manfaat."',
+            '"Masa depanmu ditentukan oleh apa yang kamu lakukan hari ini."',
+            '"Teruslah melangkah, meski pelan, yang penting tidak berhenti."',
+            '"Jadilah pribadi yang lebih sabar, lebih kuat, dan lebih tulus."',
+            '"Umur hanyalah angka, tapi kedewasaan adalah pilihan."',
+            '"Hari ini adalah hadiah, maka disebut present."'
+        ];
+        let rqIndex=0,rqTimeout=null;
+        function cycleRandomQuote(){ rqDisplay.classList.add('fading'); setTimeout(()=>{ rqIndex=(rqIndex+1)%randomQuotes.length; rqDisplay.textContent=randomQuotes[rqIndex]; rqDisplay.classList.remove('fading'); },500); rqTimeout=setTimeout(cycleRandomQuote,5000); }
+        const rqObserver=new IntersectionObserver((es)=>es.forEach(e=>{ if(e.isIntersecting&&!rqTimeout){ cycleRandomQuote(); rqObserver.unobserve(e.target); } }),{threshold:0.4}); rqObserver.observe($('interactiveSection'));
+
+        // Main update
+        function updateAll(){
+            const now=getNow();
+            const timeInTz=getTimeInTimezone(now);
+            heroClock.textContent=timeInTz; clockDisplay.textContent=timeInTz; footerClock.textContent=timeInTz;
+            const fullDate=getDateInTimezone(now); const dayName=getDayInTimezone(now); const dp=fullDate.split(', '); const dateOnly=dp.length>1?dp[1]:fullDate; const dayUpper=dayName.toUpperCase();
+            heroDateText.textContent=dayUpper+' • '+dateOnly.toUpperCase(); clockDay.textContent=dayUpper; clockDate.textContent=dateOnly.toUpperCase(); footerDate.textContent=dayUpper+' • '+dateOnly.toUpperCase();
+            isBirthdayMode=isBirthday(now);
+            if(isBirthdayMode){ document.body.classList.add('birthday-mode'); birthdayModeBanner.style.display='block'; cdGrid.style.display='none'; cdNextText.style.display='none'; if(!fwActive)startFireworks(); } else { document.body.classList.remove('birthday-mode'); birthdayModeBanner.style.display='none'; cdGrid.style.display='flex'; cdNextText.style.display='block'; stopFireworks(); }
+            const age=getAge(now); ageNumber.textContent=age; const ea=getExactAge(now); exactAgeDisplay.textContent=ea.years+' YEARS • '+ea.months+' MONTHS • '+ea.days+' DAYS';
+            const birth=new Date(CONFIG.birthYear,CONFIG.birthMonth-1,CONFIG.birthDay); const diff=now-birth; const ds=Math.floor(diff/1000); const dm=Math.floor(ds/60); const dh=Math.floor(dm/60); const dd=Math.floor(dh/24);
+            lcDays.textContent=formatLargeNumber(dd); lcHours.textContent=formatLargeNumber(dh); lcMinutes.textContent=formatLargeNumber(dm); lcSeconds.textContent=formatLargeNumber(ds);
+            const y=now.getFullYear(); const ys=new Date(y,0,1); const ye=new Date(y+1,0,1); const yd=ye-ys; const yElapsed=now-ys; const yp=(yElapsed/yd)*100;
+            ypYear.textContent=y; ypYearLabel.textContent=y; ypPercent.textContent=yp.toFixed(2)+'%'; ypBarFill.style.width=yp+'%';
+            ypDaysPassed.textContent=formatLargeNumber(Math.floor(yElapsed/(1000*60*60*24)))+' DAYS PASSED'; ypDaysRemaining.textContent=formatLargeNumber(Math.ceil((yd-yElapsed)/(1000*60*60*24)))+' DAYS REMAINING'; ypHoursRemaining.textContent=formatLargeNumber(Math.ceil((yd-yElapsed)/(1000*60*60)))+' HOURS'; ypMinutesRemaining.textContent=formatLargeNumber(Math.ceil((yd-yElapsed)/(1000*60)))+' MIN'; ypSecondsRemaining.textContent=formatLargeNumber(Math.ceil((yd-yElapsed)/1000))+' SEC';
+            const nb=getNextBirthday(now); const pb=new Date(nb.getFullYear()-1,CONFIG.birthdayMonth-1,CONFIG.birthdayDay,0,0,0); const bd=nb-pb; const be=now-pb; const bpct=Math.min(100,Math.max(0,(be/bd)*100)); const ca=getAge(now); const na=ca+1;
+            bpCurrentAge.textContent=ca; bpNextAge.textContent=na; bpMarkerStart.textContent='AGE '+ca; bpMarkerEnd.textContent='AGE '+na; bpBarFill.style.width=bpct+'%';
+            if(!isBirthdayMode){ const cdd=nb-now; const cddd=Math.floor(cdd/(1000*60*60*24)); const cdhh=Math.floor((cdd%(1000*60*60*24))/(1000*60*60)); const cdmm=Math.floor((cdd%(1000*60*60))/(1000*60)); const cdss=Math.floor((cdd%(1000*60))/1000);
+                cdDays.textContent=formatNumber(Math.max(0,cddd)); cdHours.textContent=formatNumber(Math.max(0,cdhh)); cdMinutes.textContent=formatNumber(Math.max(0,cdmm)); cdSeconds.textContent=formatNumber(Math.max(0,cdss));
+                cdNextText.textContent='NEXT BIRTHDAY: '+String(CONFIG.birthdayDay).padStart(2,'0')+' SEPTEMBER '+nb.getFullYear();
+                const t=cdd/1000; if(t<=10&&t>0&&!cdOverlayShown){ cdOverlayShown=true; countdownOverlay.style.display='flex'; cdOverlayMsg.style.display='none'; cdOverlayNumber.style.display='block'; const iv=setInterval(()=>{ const n=getNow(); const d=nb-n; const s=Math.max(0,Math.ceil(d/1000)); if(s<=0){ clearInterval(iv); cdOverlayNumber.textContent='0'; cdOverlayMsg.style.display='block'; cdOverlayNumber.style.display='none'; setTimeout(()=>{ countdownOverlay.style.display='none'; cdOverlayShown=false; cdOverlayNumber.style.display='block'; cdOverlayMsg.style.display='none'; },3000); } else cdOverlayNumber.textContent=s; },1000); }
+            } else { cdDays.textContent='00'; cdHours.textContent='00'; cdMinutes.textContent='00'; cdSeconds.textContent='00'; }
+            tlNextTitle.textContent=(nb.getFullYear()-CONFIG.birthYear)+' YEARS OLD'; letterYear.textContent=nb.getFullYear(); footerChapter.textContent='Chapter • '+ca; footerYear.textContent=y;
+            if(isBirthdayMode&&!isMidnightEventTriggered&&now.getHours()===0&&now.getMinutes()===0&&now.getSeconds()<2){ isMidnightEventTriggered=true; midnightOverlay.style.display='flex'; midnightTime.textContent='00:00'; setTimeout(()=>{ midnightMsg1.style.display='block'; midnightMsg2.style.display='block'; midnightMsg3.style.display='block'; startFireworks(); spawnConfetti(100); playSurpriseSound(); },800); setTimeout(()=>{ midnightOverlay.style.display='none'; midnightMsg1.style.display='none'; midnightMsg2.style.display='none'; midnightMsg3.style.display='none'; if(!isBirthdayMode)stopFireworks(); },6000); }
+            if(!isBirthdayMode)isMidnightEventTriggered=false;
+        }
+
+        startStoryBtn.addEventListener('click',()=>{ $('timeSection').scrollIntoView({behavior:'smooth'}); playClickSound(); });
+        wishBtn.addEventListener('click',triggerWish); surpriseBtn.addEventListener('click',triggerSurprise);
+        window.addEventListener('resize',()=>{ resizeStarfield(); resizeFireworks(); resizeOverlayCanvas(); });
+        if(!isTouchDevice){ document.addEventListener('mousemove',(e)=>{ const x=(e.clientX/window.innerWidth-0.5)*2, y=(e.clientY/window.innerHeight-0.5)*2; starfieldCanvas.style.transform=`translate(${x*-6}px,${y*-5}px)`; if(isBirthdayMode)fireworksCanvas.style.transform=`translate(${x*-3}px,${y*-2}px)`; }); }
+
+        function init(){ resizeStarfield(); resizeFireworks(); resizeOverlayCanvas(); drawStarfield(); runLoadingSequence(); updateAll(); setInterval(updateAll,1000); updateScrollProgress(); clockTz.textContent=CONFIG.timezone.toUpperCase(); document.querySelectorAll('.footer-tz').forEach(el=>el.textContent=CONFIG.timezone.toUpperCase()); footerChapter.textContent='Chapter • '+getAge(getNow()); const nb=getNextBirthday(getNow()); soYear.textContent=nb.getFullYear(); soAge.textContent=nb.getFullYear()-CONFIG.birthYear; ensureVisible(); }
+        init();
+    </script>
+</body>
+</html>
