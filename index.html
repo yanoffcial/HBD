@@ -215,6 +215,20 @@
         .so-age { font-family: var(--font-display); font-weight:700; color:var(--rose-soft); text-shadow:0 0 60px rgba(255,150,200,0.7); line-height:1; }
         .so-close { margin-top:16px; padding:8px 20px; border-radius:50px; font-family:var(--font-mono); font-size:0.55rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--gray-300); border:1px solid var(--gray-700); background:transparent; }
 
+        /* MIDNIGHT OVERLAY */
+        #midnightOverlay {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(5,0,10,0.95);
+            z-index: 100; display: none; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; pointer-events: none;
+        }
+        #midnightOverlay.active { display: flex; }
+        #midnightTime { font-family: var(--font-mono); font-size: clamp(2rem,8vw,5rem); font-weight: 300; color: #fff; letter-spacing: 0.2em; }
+        #midnightMsg1 { font-family: var(--font-display); font-size: clamp(1.4rem,5vw,2.8rem); font-weight: 700; color: var(--rose-soft); margin-top: 14px; letter-spacing: 0.1em; display: none; }
+        #midnightMsg2 { font-family: var(--font-display); font-size: clamp(1.8rem,6vw,3.5rem); font-weight: 700; color: #fff; margin-top: 10px; letter-spacing: 0.08em; display: none; text-shadow: 0 0 60px rgba(255,150,200,0.7); }
+        #midnightMsg3 { font-family: var(--font-mono); font-size: clamp(1.1rem,4vw,1.8rem); color: var(--rose-soft); margin-top: 10px; letter-spacing: 0.2em; display: none; }
+        #midnightParty { font-size: clamp(3rem, 12vw, 8rem); margin: 15px 0; animation: partyBounce 0.8s infinite; display: none; }
+        @keyframes partyBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
         /* FINAL */
         #finalSection { min-height:70vh; background:rgba(5,0,10,0.5); }
         .final-text { font-family: var(--font-display); font-size: clamp(1rem,3vw,1.6rem); font-weight:700; color:var(--white); opacity:0; transform:translateY(10px); transition:opacity 0.6s, transform 0.6s; }
@@ -495,7 +509,7 @@
     <div id="wishOverlay">
         <div class="wo-text">WISH MADE.</div>
         <div class="wo-sub">"Now make it happen."</div>
-        <div class="wo-motivation" style="font-family: var(--font-body); font-style: italic; color: var(--gray-300); margin-top: 10px; max-width: 80%;">
+        <div style="font-family: var(--font-body); font-style: italic; color: var(--gray-300); margin-top: 10px; max-width: 80%;">
             Bukan hanya usia yang bertambah, tapi tanggung jawab dan kebijaksanaan. Semoga tahun ini membawa kedewasaan, keberanian, dan cinta yang lebih besar.
         </div>
     </div>
@@ -507,11 +521,12 @@
         <button class="so-close" id="soClose">CLOSE</button>
     </div>
 
-    <div id="midnightOverlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,0,10,0.95);z-index:100;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none;">
-        <div id="midnightTime" style="font-family:var(--font-mono);font-size:clamp(2rem,8vw,5rem);font-weight:300;color:#fff;letter-spacing:0.2em;">00:00</div>
-        <div id="midnightMsg1" style="font-family:var(--font-display);font-size:clamp(1.4rem,5vw,2.8rem);font-weight:700;color:var(--rose-soft);margin-top:14px;letter-spacing:0.1em;display:none;">IT'S MY DAY.</div>
-        <div id="midnightMsg2" style="font-family:var(--font-display);font-size:clamp(1.8rem,6vw,3.5rem);font-weight:700;color:#fff;margin-top:10px;letter-spacing:0.08em;display:none;text-shadow:0 0 60px rgba(255,150,200,0.7);">HAPPY BIRTHDAY TO ME</div>
-        <div id="midnightMsg3" style="font-family:var(--font-mono);font-size:clamp(1.1rem,4vw,1.8rem);color:var(--rose-soft);margin-top:10px;letter-spacing:0.2em;display:none;">16 YEARS OLD</div>
+    <div id="midnightOverlay">
+        <div id="midnightTime">00:00</div>
+        <div id="midnightParty">🎉🎂🎈</div>
+        <div id="midnightMsg1">IT'S MY DAY.</div>
+        <div id="midnightMsg2">HAPPY BIRTHDAY TO ME</div>
+        <div id="midnightMsg3">16 YEARS OLD</div>
     </div>
 
     <div id="countdownOverlay" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(5,0,10,0.95);z-index:95;display:none;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;backdrop-filter:blur(20px);">
@@ -608,6 +623,7 @@
         const midnightMsg1 = $('midnightMsg1');
         const midnightMsg2 = $('midnightMsg2');
         const midnightMsg3 = $('midnightMsg3');
+        const midnightParty = $('midnightParty');
         const countdownOverlay = $('countdownOverlay');
         const cdOverlayNumber = $('cdOverlayNumber');
         const cdOverlayMsg = $('cdOverlayMsg');
@@ -782,7 +798,33 @@
                 const t=cdd/1000; if(t<=10&&t>0&&!cdOverlayShown){ cdOverlayShown=true; countdownOverlay.style.display='flex'; cdOverlayMsg.style.display='none'; cdOverlayNumber.style.display='block'; const iv=setInterval(()=>{ const n=getNow(); const d=nb-n; const s=Math.max(0,Math.ceil(d/1000)); if(s<=0){ clearInterval(iv); cdOverlayNumber.textContent='0'; cdOverlayMsg.style.display='block'; cdOverlayNumber.style.display='none'; setTimeout(()=>{ countdownOverlay.style.display='none'; cdOverlayShown=false; cdOverlayNumber.style.display='block'; cdOverlayMsg.style.display='none'; },3000); } else cdOverlayNumber.textContent=s; },1000); }
             } else { cdDays.textContent='00'; cdHours.textContent='00'; cdMinutes.textContent='00'; cdSeconds.textContent='00'; }
             tlNextTitle.textContent=(nb.getFullYear()-CONFIG.birthYear)+' YEARS OLD'; letterYear.textContent=nb.getFullYear(); footerChapter.textContent='Chapter • '+ca; footerYear.textContent=y;
-            if(isBirthdayMode&&!isMidnightEventTriggered&&now.getHours()===0&&now.getMinutes()===0&&now.getSeconds()<2){ isMidnightEventTriggered=true; midnightOverlay.style.display='flex'; midnightTime.textContent='00:00'; setTimeout(()=>{ midnightMsg1.style.display='block'; midnightMsg2.style.display='block'; midnightMsg3.style.display='block'; startFireworks(); spawnConfetti(100); playSurpriseSound(); },800); setTimeout(()=>{ midnightOverlay.style.display='none'; midnightMsg1.style.display='none'; midnightMsg2.style.display='none'; midnightMsg3.style.display='none'; if(!isBirthdayMode)stopFireworks(); },6000); }
+
+            // Midnight event
+            if(isBirthdayMode&&!isMidnightEventTriggered&&now.getHours()===0&&now.getMinutes()===0&&now.getSeconds()<2){
+                isMidnightEventTriggered=true;
+                // Aktivasi musik otomatis
+                if(!musicOn){ startMusic(); musicOn=true; musicToggle.textContent='♫ MUSIC ON'; musicToggle.classList.add('on'); }
+                // Tampilkan overlay pesta
+                midnightOverlay.classList.add('active');
+                midnightTime.textContent='00:00';
+                setTimeout(()=>{
+                    midnightParty.style.display='block';
+                    midnightMsg1.style.display='block';
+                    midnightMsg2.style.display='block';
+                    midnightMsg3.style.display='block';
+                    startFireworks();
+                    spawnConfetti(150);
+                    playSurpriseSound();
+                },500);
+                setTimeout(()=>{
+                    midnightOverlay.classList.remove('active');
+                    midnightParty.style.display='none';
+                    midnightMsg1.style.display='none';
+                    midnightMsg2.style.display='none';
+                    midnightMsg3.style.display='none';
+                    if(!isBirthdayMode)stopFireworks();
+                },8000);
+            }
             if(!isBirthdayMode)isMidnightEventTriggered=false;
         }
 
@@ -795,4 +837,4 @@
         init();
     </script>
 </body>
-</html>
+    </html>
